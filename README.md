@@ -28,8 +28,8 @@ A 2D top-down survival game where enemies **learn from your playstyle** using Q-
 
 - git clone the repository
 - cd Survival-Game
-- pip install -r requirements.txt (for python 3.13 => pip install --pre -r requirements.txt )
-- open the folder in your environment(for loading the graphics file)
+- pip install -r requirements.txt ( for python 3.13 => pip install --pre -r requirements.txt )
+- open the folder in your environment ( for loading the graphics file )
 - python main.py
 
 
