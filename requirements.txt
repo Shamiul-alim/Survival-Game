@@ -1,0 +1,16 @@
+# Core Requirements
+pygame==2.5.2
+numpy==1.26.4
+python-dateutil==2.8.2
+
+# Development/ML Extras (optional)
+pandas==2.2.1
+matplotlib==3.8.3
+scikit-learn==1.4.0
+
+# Project Metadata
+pygame-menu==4.2.8
+tqdm==4.66.1
+
+# Environment Marker (Python 3.8+)
+python-dotenv==1.0.1
