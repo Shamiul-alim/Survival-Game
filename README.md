@@ -1,64 +1,43 @@
-#Survival Game with Adaptive AI Enemies
-A 2D top-down survival game featuring enemies that learn from player behavior using reinforcement learning techniques.
+<h1> Survival Game with Adaptive AI Enemies</h1>
 
-Key Features
-Intelligent Enemy AI using Q-learning algorithms
+A 2D top-down survival game where enemies **learn from your playstyle** using Q-learning. Experience dynamic combat that evolves as you play.
 
-Dynamic Combat System where enemies adapt to player tactics
 
-Dodge Mechanics with distance tracking and printing
+##  Features
 
-Multiple Enemy Types with unique behaviors and learning patterns
+- **Adaptive Enemy AI** — Enemies use Q-learning to counter your attacks
+- **Dynamic Combat** — Dodge, block, and counter mechanics in real time
+- **Multiple Enemy Types** — Each with unique learning patterns
+- **Weapon & Magic System** — Melee and spellcasting with switching
+- **Dodge Analytics** — Real-time dodge distance tracking and logs
+- **Player Progression** — Upgrade your stats as the AI improves
 
-Weapon & Magic Systems with different attack types
 
-Player Progression with stats upgrades
+##  AI Learning Overview
 
-Technical Highlights
-Implemented Q-learning for enemy decision making:
+- Shared Q-table across enemy instances (hive learning)
+- Recognizes and adapts to player attack styles
+- Gradually shifts from exploration to exploitation
+- Console logs include:
+  - Dodge distances
+  - Q-values
+  - Recognized patterns
 
-Enemies track player attack patterns
 
-Choose optimal defensive actions (dodge/block/counter)
+##  Getting Started
 
-Shared learning between enemy instances
+- git clone the repository
+- pip install -r requirements.txt
+- python main.py
 
-Real-time combat analytics:
 
-Dodge distance measurements
+##  Controls:
 
-Q-table value tracking
-
-Attack pattern recognition
-
-How Enemies Learn
-Enemies utilize a shared Q-table to:
-
-Remember successful defensive actions against different attack types
-
-Gradually reduce exploration as they learn
-
-Adapt movement patterns based on player preferences
-
-Print learning metrics to console for debugging
-
-Try It Out
-Clone the repository
-
-Install requirements: pip install -r requirements.txt
-
-Run: python main.py
-
-Controls:
-
-Arrow keys: Movement
-
-Space: Attack
-
-L-Ctrl: Magic
-
-Q/E: Switch weapons/magic
-
-M: Toggle menu
-
-S: Save learning data
+| Action              | Key        |
+| ------------------- | ---------- |
+| Move                | Arrow Keys |
+| Attack              | Space      |
+| Cast Magic          | Left Ctrl  |
+| Switch Weapon/Magic | Q / E      |
+| Toggle Menu         | M          |
+| Save AI Learning    | S          |
