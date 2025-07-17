@@ -1,0 +1,99 @@
+{
+  "raccoon": {
+    "q_table": {
+      "weapon": {
+        "dodge": 0,
+        "block": 0,
+        "counter": 0
+      },
+      "magic": {
+        "dodge": 0,
+        "block": 0,
+        "counter": 0
+      }
+    },
+    "attack_history": [],
+    "exploration_rate": 0.3
+  },
+  "bamboo": {
+    "q_table": {
+      "weapon": {
+        "dodge": 1.0466174574128357,
+        "block": 0.31776687116715524,
+        "counter": 0.09791000000000001
+      },
+      "magic": {
+        "dodge": 0,
+        "block": 0.17505515561943202,
+        "counter": 0.4681588047920001
+      }
+    },
+    "attack_history": [
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "magic",
+      "magic",
+      "magic",
+      "magic",
+      "magic",
+      "magic",
+      "magic",
+      "magic",
+      "magic"
+    ],
+    "exploration_rate": 0.2985
+  },
+  "spirit": {
+    "q_table": {
+      "weapon": {
+        "dodge": 0,
+        "block": 0,
+        "counter": 0
+      },
+      "magic": {
+        "dodge": 0,
+        "block": 0,
+        "counter": 0.08000000000000002
+      }
+    },
+    "attack_history": [
+      "magic"
+    ],
+    "exploration_rate": 0.2985
+  },
+  "squid": {
+    "q_table": {
+      "weapon": {
+        "dodge": 0.490099501,
+        "block": 0,
+        "counter": 0.09791000000000001
+      },
+      "magic": {
+        "dodge": 0,
+        "block": 0,
+        "counter": 0
+      }
+    },
+    "attack_history": [
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon",
+      "weapon"
+    ],
+    "exploration_rate": 0.2985
+  }
+}

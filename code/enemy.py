@@ -1,7 +1,35 @@
 import pygame
+import random
+from pathlib import Path
 from settings import *
 from entity import Entity
 from support import *
+import json
+
+# Shared learning data structure (global to all enemies)
+ENEMY_LEARNING = {
+    # Format: {enemy_type: {'q_table': {...}, 'attack_history': [], 'exploration_rate': 0.3}}
+}
+LEARNING_FILE = Path('enemy_learning.json')
+
+def init_learning():
+    global ENEMY_LEARNING
+    try:
+        if LEARNING_FILE.exists():
+            with open(LEARNING_FILE, 'r') as f:
+                ENEMY_LEARNING = json.load(f)
+                print("Loaded enemy learning data")
+    except Exception as e:
+        print(f"Error loading learning data: {e}")
+        ENEMY_LEARNING = {}
+
+def save_learning_data():
+    try:
+        with open(LEARNING_FILE, 'w') as f:
+            json.dump(ENEMY_LEARNING, f, indent=2)
+            print(f"Saved learning data to {LEARNING_FILE.absolute()}")
+    except Exception as e:
+        print(f"Error saving learning data: {e}")
 
 class Enemy(Entity):
 	def __init__(self,monster_name,pos,groups,obstacle_sprites,damage_player,trigger_death_particles,add_exp):
@@ -32,6 +60,29 @@ class Enemy(Entity):
 		self.notice_radius = monster_info['notice_radius']
 		self.attack_type = monster_info['attack_type']
 
+		if monster_name not in ENEMY_LEARNING:
+			ENEMY_LEARNING[monster_name] = {
+                'q_table': {
+                    'weapon': {'dodge': 0, 'block': 0, 'counter': 0},
+                    'magic': {'dodge': 0, 'block': 0, 'counter': 0}
+                },
+                'attack_history': [],
+                'exploration_rate': 0.3  # Start with 30% exploration
+            }
+        
+		self.shared_data = ENEMY_LEARNING[monster_name]
+		self.q_table = self.shared_data['q_table']
+		self.attack_history = self.shared_data['attack_history']
+		self.exploration_rate = self.shared_data['exploration_rate']
+
+		# Learning parameters
+		self.learning_rate = 0.1
+		self.discount_factor = 0.9
+        
+        # Combat tracking
+		self.last_player_attack = None
+		self.last_enemy_action = None
+        
 		# player interaction
 		self.can_attack = True
 		self.attack_time = None
@@ -84,14 +135,35 @@ class Enemy(Entity):
 			self.status = 'idle'
 
 	def actions(self,player):
-		if self.status == 'attack':
-			self.attack_time = pygame.time.get_ticks()
-			self.damage_player(self.attack_damage,self.attack_type)
-			self.attack_sound.play()
-		elif self.status == 'move':
-			self.direction = self.get_player_distance_direction(player)[1]
-		else:
-			self.direction = pygame.math.Vector2()
+			"""Ml Modification"""
+			if self.status == 'attack':
+				self.attack_time = pygame.time.get_ticks()
+				
+				# Use shared attack history to inform tactics
+				if len(self.attack_history) > 5:
+					weapon_attacks = self.attack_history.count('weapon')
+					magic_attacks = len(self.attack_history) - weapon_attacks
+					
+					# Adjust behavior based on player's preferred attack type
+					if magic_attacks > weapon_attacks * 1.5:  # Player prefers magic
+						# Get closer to pressure magic users
+						self.direction = self.get_player_distance_direction(player)[1]
+						monster_info = monster_data[self.monster_name]
+						self.speed = monster_info['speed'] * 1.3
+					elif weapon_attacks > magic_attacks * 1.5:  # Player prefers weapons
+						# Maintain optimal weapon range
+						dist = self.get_player_distance_direction(player)[0]
+						ideal_range = self.attack_radius * 0.8
+						if dist < ideal_range:
+							self.direction = self.get_player_distance_direction(player)[1] * -1
+				
+				self.damage_player(self.attack_damage, self.attack_type)
+				self.attack_sound.play()
+				
+			elif self.status == 'move':
+				self.direction = self.get_player_distance_direction(player)[1]
+			else:
+				self.direction = pygame.math.Vector2()
 
 	def animate(self):
 		animation = self.animations[self.status]
@@ -121,16 +193,65 @@ class Enemy(Entity):
 			if current_time - self.hit_time >= self.invincibility_duration:
 				self.vulnerable = True
 
-	def get_damage(self,player,attack_type):
+	def get_damage(self, player, attack_type):
+		"""ML Modification"""
 		if self.vulnerable:
-			self.hit_sound.play()
-			self.direction = self.get_player_distance_direction(player)[1]
-			if attack_type == 'weapon':
-				self.health -= player.get_full_weapon_damage()
-			else:
-				self.health -= player.get_full_magic_damage()
-			self.hit_time = pygame.time.get_ticks()
-			self.vulnerable = False
+			action = self.choose_action(attack_type)
+			print(f"{self.monster_name} chose: {action} against {attack_type} attack")
+			print(f"Q-table values: {self.q_table[attack_type]}")
+			# Record player attack type in shared history
+			self.attack_history.append(attack_type)
+			if len(self.attack_history) > 20:  # Keep reasonable history size
+				self.attack_history.pop(0)
+			
+			
+			# Apply action effects
+			if action == 'dodge':
+				# 50% chance to dodge
+				if random.random() < 0.5:
+					self.direction = self.get_player_distance_direction(player)[1] * -1
+					self.hit_sound.play()
+					self.hit_time = pygame.time.get_ticks()
+					self.vulnerable = False
+					self.update_q_table(1)  # Positive reward for successful dodge
+					return
+			
+			elif action == 'block':
+				# Reduce damage by 50%
+				damage_reduction = 0.5
+				self.hit_sound.play()
+				self.direction = self.get_player_distance_direction(player)[1]
+				if attack_type == 'weapon':
+					self.health -= player.get_full_weapon_damage() * damage_reduction
+				else:
+					self.health -= player.get_full_magic_damage() * damage_reduction
+				self.hit_time = pygame.time.get_ticks()
+				self.vulnerable = False
+				self.update_q_table(0.5)  # Moderate reward for blocking
+			
+			else:  # counter
+				# Take full damage but counter-attack immediately
+				self.hit_sound.play()
+				self.direction = self.get_player_distance_direction(player)[1]
+				if attack_type == 'weapon':
+					self.health -= player.get_full_weapon_damage()
+				else:
+					self.health -= player.get_full_magic_damage()
+				self.hit_time = pygame.time.get_ticks()
+				self.vulnerable = False
+				
+				# Counter attack if still alive
+				if self.health > 0:
+					self.status = 'attack'
+					self.actions(player)
+					# Get monster info from settings
+					monster_info = monster_data[self.monster_name]
+					# Reward depends on remaining health
+					reward = -0.2 if self.health < monster_info['health'] * 0.2 else 0.8
+					self.update_q_table(reward)
+			
+			# Gradually reduce exploration rate in shared data
+			self.shared_data['exploration_rate'] = max(0.05, self.exploration_rate * 0.995)
 
 	def check_death(self):
 		if self.health <= 0:
@@ -153,3 +274,28 @@ class Enemy(Entity):
 	def enemy_update(self,player):
 		self.get_status(player)
 		self.actions(player)
+  
+	#ml method
+	def update_q_table(self, reward):
+		"""Update shared Q-values based on the last action and its outcome"""
+		if self.last_player_attack and self.last_enemy_action:
+			old_value = self.q_table[self.last_player_attack][self.last_enemy_action]
+			max_q = max(self.q_table[self.last_player_attack].values())
+			new_value = old_value + self.learning_rate * (reward + self.discount_factor * max_q - old_value)
+			self.q_table[self.last_player_attack][self.last_enemy_action] = new_value
+
+	def choose_action(self, player_attack_type):
+		"""Choose an action based on shared Q-values or exploration"""
+		if random.random() < self.exploration_rate:
+            # Explore: choose random action
+			action = random.choice(list(self.q_table[player_attack_type].keys()))
+		else:
+            # Exploit: choose best known action from shared knowledge
+			actions = self.q_table[player_attack_type]
+			action = max(actions, key=actions.get)
+        
+		self.last_player_attack = player_attack_type
+		self.last_enemy_action = action
+		return action
+
+ 

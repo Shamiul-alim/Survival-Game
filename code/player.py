@@ -204,6 +204,18 @@ class Player(Entity):
 			self.energy += 0.01 * self.stats['magic']
 		else:
 			self.energy = self.stats['energy']
+   
+	#ml function
+	def create_attack(self):
+		self.current_attack = Weapon(self.player, [self.visible_sprites, self.attack_sprites])
+		self.weapon_attack_sound.play()
+        # Attack type is automatically tracked in enemy's get_damage method
+    
+	def create_magic(self, style, strength, cost):
+		if style == 'heal':
+			self.magic_player.heal(self.player, strength, cost, [self.visible_sprites])
+		if style == 'flame':
+			self.magic_player.flame(self.player, cost, [self.visible_sprites, self.attack_sprites])
 
 	def update(self):
 		self.input()
