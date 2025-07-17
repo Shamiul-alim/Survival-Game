@@ -103,6 +103,14 @@ class Enemy(Entity):
 		self.death_sound.set_volume(0.6)
 		self.hit_sound.set_volume(0.6)
 		self.attack_sound.set_volume(0.6)
+  
+		#for dodging distance
+		self.is_dodging = False
+		self.dodge_direction = None
+		self.dodge_start_pos = None
+		self.dodge_duration = 300  # milliseconds
+		self.dodge_start_time = 0
+
 
 	def import_graphics(self,name):
 		self.animations = {'idle':[],'move':[],'attack':[]}
@@ -189,13 +197,16 @@ class Enemy(Entity):
 			if current_time - self.attack_time >= self.attack_cooldown:
 				self.can_attack = True
 
-		if not self.vulnerable:
-			if current_time - self.hit_time >= self.invincibility_duration:
-				self.vulnerable = True
+		# Invincibility cooldown - only check if hit_time is not None
+		if self.hit_time is not None:  # Add this check
+			if not self.vulnerable:
+				if current_time - self.hit_time >= self.invincibility_duration:
+					self.vulnerable = True
 
 	def get_damage(self, player, attack_type):
 		"""ML Modification"""
 		if self.vulnerable:
+			self.hit_time = pygame.time.get_ticks()  # Always set hit_time when taking damage
 			action = self.choose_action(attack_type)
 			print(f"{self.monster_name} chose: {action} against {attack_type} attack")
 			print(f"Q-table values: {self.q_table[attack_type]}")
@@ -204,15 +215,19 @@ class Enemy(Entity):
 			if len(self.attack_history) > 20:  # Keep reasonable history size
 				self.attack_history.pop(0)
 			
+			# Choose defensive action based on shared learning
+			action = self.choose_action(attack_type)
 			
 			# Apply action effects
 			if action == 'dodge':
 				# 50% chance to dodge
 				if random.random() < 0.5:
-					self.direction = self.get_player_distance_direction(player)[1] * -1
-					self.hit_sound.play()
-					self.hit_time = pygame.time.get_ticks()
+					self.dodge_direction = self.get_player_distance_direction(player)[1] * -1
+					self.dodge_start_pos = pygame.math.Vector2(self.rect.center)
+					self.is_dodging = True
+					self.dodge_start_time = pygame.time.get_ticks()
 					self.vulnerable = False
+					self.hit_sound.play()
 					self.update_q_table(1)  # Positive reward for successful dodge
 					return
 			
@@ -266,6 +281,21 @@ class Enemy(Entity):
 
 	def update(self):
 		self.hit_reaction()
+		self.hit_reaction()
+    
+		current_time = pygame.time.get_ticks()
+    
+    	# Handle dodge movement
+		if self.is_dodging:
+			if current_time - self.dodge_start_time < self.dodge_duration:
+				self.direction = self.dodge_direction
+			else:
+				self.is_dodging = False
+            	# Calculate and print final dodge distance
+				final_pos = pygame.math.Vector2(self.rect.center)
+				dodge_distance = (final_pos - self.dodge_start_pos).length()
+				print(f"{self.monster_name} dodged {dodge_distance:.1f} pixels backward")
+    
 		self.move(self.speed)
 		self.animate()
 		self.cooldowns()
@@ -281,6 +311,7 @@ class Enemy(Entity):
 		if self.last_player_attack and self.last_enemy_action:
 			old_value = self.q_table[self.last_player_attack][self.last_enemy_action]
 			max_q = max(self.q_table[self.last_player_attack].values())
+			#q-learning formula
 			new_value = old_value + self.learning_rate * (reward + self.discount_factor * max_q - old_value)
 			self.q_table[self.last_player_attack][self.last_enemy_action] = new_value
 

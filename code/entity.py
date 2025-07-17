@@ -12,10 +12,16 @@ class Entity(pygame.sprite.Sprite):
 		if self.direction.magnitude() != 0:
 			self.direction = self.direction.normalize()
 
-		self.hitbox.x += self.direction.x * speed
-		self.collision('horizontal')
-		self.hitbox.y += self.direction.y * speed
-		self.collision('vertical')
+		# Move regardless of obstacles during dodge
+		if hasattr(self, 'is_dodging') and self.is_dodging:
+			self.hitbox.x += self.direction.x * speed * 1.5  # 1.5x speed during dodge
+			self.hitbox.y += self.direction.y * speed * 1.5
+		else:
+        	# Normal movement with collision
+			self.hitbox.x += self.direction.x * speed
+			self.collision('horizontal')
+			self.hitbox.y += self.direction.y * speed
+			self.collision('vertical')
 		self.rect.center = self.hitbox.center
 
 	def collision(self,direction):
